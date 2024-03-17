@@ -1,0 +1,8 @@
+.vs
+.vscode
+.cache
+.xmake
+bin
+build
+out
+__pycache__
