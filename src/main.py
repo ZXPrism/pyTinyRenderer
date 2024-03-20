@@ -1,13 +1,21 @@
+import numpy as np
+
 from Renderer import Renderer
-from random import uniform
-import math
+from Model import Model
+from Shader import PhongShader
 
 width = 1024
 height = 1024
 
 renderer = Renderer(width, height)
+model = Model("tinyrenderer/african_head.obj")
 
-renderer.wireframe("tinyrenderer/african_head.obj")
-# renderer.triangle((200, 100), (400, 900), (800, 500), [0.7] * 3)
+shader = PhongShader(width, height)
+shader.uniformModelMatrix = np.identity(4)
+shader.uniformViewMatrix = np.identity(4)
+shader.uniformProjectionMatrix = np.identity(4)
 
-renderer.render()
+renderer.useShader(shader)
+renderer.modelFilled(model)
+
+renderer.update()

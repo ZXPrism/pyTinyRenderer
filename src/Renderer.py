@@ -1,19 +1,30 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import Utils
+
 from random import uniform
+from Model import Model
 
 
 class Renderer:
 
-    def __init__(self, width, height):
+    __shader = None
+
+    def __init__(self, width: int, height: int):
         self.__imgWidth = width
         self.__imgHeight = height
         self.__img = np.ones((height, width, 3))
+        self.__zbuffer = np.full((width, height), float("-inf"))
 
-    def render(self):
+    def useShader(self, shader):
+        self.__shader = shader
+
+    def update(self):
         plt.imshow(self.__img)
         plt.show()
+
+    def __checkShaderValidity(self):
+        if self.__shader == None:
+            print("[Renderer] A shader is necessary for rendering!")
 
     # low-level operations
     def setPixel(self, x, y, color):
@@ -29,7 +40,9 @@ class Renderer:
         S = np.array([x0, y0])  # start point
         V = np.array([x1 - x0, y1 - y0])  # direction
 
-        for t in Utils.fRange(0.0, 1.0, 0.01):
+        tRange = [t / 100 for t in range(100)]
+
+        for t in tRange:
             P = S + t * V
             self.setPixel(P[0], P[1], color)
 
@@ -123,41 +136,27 @@ class Renderer:
     def line(self, x0, y0, x1, y1, color):
         self.line3(x0, y0, x1, y1, color)
 
-    def wireframe(self, wireframeFilePath):  # only support WaveFront OBJ Format
-        obj = open(wireframeFilePath)
-        lines = obj.readlines()
-        obj.close()
+    def modelWireframed(self, model: Model):  # only support WaveFront OBJ Format
+        for i in range(model.triangleNum):
+            self.__shader.vertex(model, i)
 
-        coords = [[]]
-        for line in lines:
-            item = line.strip().split(" ")
+            self.triangleWireframed(
+                self.__shader.position[0],
+                self.__shader.position[1],
+                self.__shader.position[2],
+                [0.0, 0.0, 1.0],
+            )
 
-            if item[0] == "v":
-                pos = list(map(float, item[1:]))
-                for i in range(3):
-                    pos[i] *= self.__imgWidth // 2 - 1
-                    pos[i] += self.__imgWidth // 2 - 1
-                    if i == 1:
-                        pos[i] = self.__imgWidth - pos[i]
-                coords.append(pos)
+    def modelFilled(self, model: Model):  # only support WaveFront OBJ Format
+        for i in range(model.triangleNum):
+            self.__shader.vertex(model, i)
 
-            elif item[0] == "f":
-                faceData = [int(data.split("/")[0]) for data in item[1:]]
-                # for v in range(3):
-                #     nv = (v + 1) % 3
-                #     self.line(
-                #         coords[faceData[v]][0],
-                #         coords[faceData[v]][1],
-                #         coords[faceData[nv]][0],
-                #         coords[faceData[nv]][1],
-                #         [0.0, 0.0, 1.0],
-                #     )
-                self.triangle(
-                    coords[faceData[0]],
-                    coords[faceData[1]],
-                    coords[faceData[2]],
-                    [0.0, 0.0, 1.0],
-                )
+            self.triangle(
+                self.__shader.position[0],
+                self.__shader.position[1],
+                self.__shader.position[2],
+                [0.0, 0.0, 1.0],
+            )
 
     def triangleWireframed(self, v0, v1, v2, color):
         self.line(v0[0], v0[1], v1[0], v1[1], color)
@@ -202,12 +201,12 @@ class Renderer:
         )
 
         for i in range(2):
-            v0 = vertices[i]
-            v1 = vertices[i + 1]
-            v2 = vertices[(i + 2) % 3]
+            v0 = list(map(int, vertices[i]))
+            v1 = list(map(int, vertices[i + 1]))
+            v2 = list(map(int, vertices[(i + 2) % 3]))
             if v0[1] != v1[1]:
                 slopeInv1 = (v1[0] - v0[0]) / (v1[1] - v0[1])
-                for y in Utils.fRange(v0[1] + 1, v1[1]):
+                for y in range(v0[1] + 1, v1[1] + 1):
                     self.line(
                         slopeInv1 * (y - v0[1]) + v0[0],
                         y,
@@ -220,15 +219,16 @@ class Renderer:
         # self.triangleWireframed(vertices[0], vertices[1], vertices[2], [1.0, 0.0, 0.0])
 
     def triangle2(self, v0, v1, v2, color):  # based on barycentric coordinates
+
         # 1. Find the bounding box of the given triangle
-        minX = min(v0[0], v1[0], v2[0])
-        maxX = max(v0[0], v1[0], v2[0])
-        minY = min(v0[1], v1[1], v2[1])
-        maxY = max(v0[1], v1[1], v2[1])
+        minX = int(min(v0[0], v1[0], v2[0]))
+        maxX = int(max(v0[0], v1[0], v2[0]))
+        minY = int(min(v0[1], v1[1], v2[1]))
+        maxY = int(max(v0[1], v1[1], v2[1]))
 
         # 2. For every pixels inside the triangle, draw it
 
-        def insideTriangle(x, y, v0, v1, v2):
+        def barycentric(x, y, v0, v1, v2):
             vec1 = [v2[0] - v0[0], v2[0] - v1[0], v2[0] - x]
             vec2 = [v2[1] - v0[1], v2[1] - v1[1], v2[1] - y]
             res = [  # res = cross_product(vec1, vec2)
@@ -238,15 +238,28 @@ class Renderer:
             ]
             u = res[0] / -res[2]
             v = res[1] / -res[2]
-            return u > 0 and v > 0 and u + v < 1
 
-        for x in Utils.fRange(minX, maxX):
-            for y in Utils.fRange(minY, maxY):
-                if insideTriangle(x, y, v0, v1, v2):
-                    self.setPixel(x, y, color)
+            return (
+                u >= 0 and v >= 0 and u + v <= 1,
+                u * (v2[2] - v0[2]) + v * (v2[2] - v1[2]),
+            )
+
+        for x in range(minX, maxX + 1):
+            for y in range(minY, maxY + 1):
+                (inside, z) = barycentric(x, y, v0, v1, v2)
+                if inside:
+                    if self.__zbuffer[x][y] > z:
+                        continue
+                    self.__zbuffer[x][y] = z
+
+                    if self.__shader != None:
+                        self.__shader.fragment(x, y, z)
+                        self.setPixel(x, y, self.__shader.fragColor)
+                    else:
+                        self.setPixel(x, y, color)
 
         # 3. (optional) highlight the contour for test
         # self.triangleWireframed(v0, v1, v2, [1.0, 0.0, 0.0])
 
     def triangle(self, v0, v1, v2, color):
-        self.triangle2(v0, v1, v2, [uniform(0, 1) for _ in range(3)])
+        self.triangle2(v0, v1, v2, color)
