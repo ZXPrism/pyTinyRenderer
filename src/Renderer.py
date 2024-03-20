@@ -241,7 +241,7 @@ class Renderer:
 
             return (
                 u >= 0 and v >= 0 and u + v <= 1,
-                u * (v2[2] - v0[2]) + v * (v2[2] - v1[2]),
+                u * v0[2] + v * v1[2] + (1 - u - v) * v2[2],
             )
 
         for x in range(minX, maxX + 1):

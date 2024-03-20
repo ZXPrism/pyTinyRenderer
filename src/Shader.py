@@ -53,4 +53,4 @@ class PhongShader:
             self.position[i] = self.viewportMatrix @ self.position[i]
 
     def fragment(self, x, y, z):
-        self.fragColor = [z / 2 + 0.5, z / 2 + 0.5, z / 2 + 0.5]
+        self.fragColor = [(z / 2 + 0.5) ** 3, (z / 2 + 0.5) ** 3, (z / 2 + 0.5) ** 3]

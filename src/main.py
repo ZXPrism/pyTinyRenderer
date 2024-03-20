@@ -4,8 +4,8 @@ from Renderer import Renderer
 from Model import Model
 from Shader import PhongShader
 
-width = 1024
-height = 1024
+width = 512
+height = 512
 
 renderer = Renderer(width, height)
 model = Model("tinyrenderer/african_head.obj")

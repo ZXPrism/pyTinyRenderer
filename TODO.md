@@ -6,3 +6,9 @@
 - [X] Model 类封装，添加对法线和纹理的支持
 - [X] Shader 类，包含顶点着色器和片段着色器
 - [X] Z-Buffer
+
+2024-3-21
+- [ ] Model, View and Projection
+- [ ] Normal Texture
+- [ ] Shadow Mapping
+- [ ] Ambient Occlusion
