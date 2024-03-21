@@ -66,7 +66,9 @@ class PhongShader:
         normalInterpolated = []
         for i in range(3):
             normalInterpolated.append(
-                (self.varyingN0[i] + self.varyingN1[i] + self.varyingN2[i]) / 3
+                self.varyingN0[i] * u
+                + self.varyingN1[i] * v
+                + self.varyingN2[i] * (1 - u - v)
             )
         normalInterpolated = Utils.norm(normalInterpolated)
         self.fragColor = [
