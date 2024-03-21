@@ -4,6 +4,8 @@ from Model import Model
 from copy import copy
 from random import uniform
 
+import Utils
+
 
 class PhongShader:
 
@@ -19,9 +21,13 @@ class PhongShader:
                 [0, 0, 1, 0],
                 [0, 0, 0, 1],
             ]
+            # Q: What about Z-coordinates? Do they need to be transformed?
         )
 
     def vertex(self, model: Model, triangleNo: int):
+        # print(self.uniformViewMatrix)
+        # print(self.uniformProjectionMatrix)
+
         mvp = (
             self.uniformProjectionMatrix
             @ self.uniformViewMatrix
@@ -31,6 +37,10 @@ class PhongShader:
         v0 = copy(model.modelData[triangleNo * 9])
         v1 = copy(model.modelData[triangleNo * 9 + 3])
         v2 = copy(model.modelData[triangleNo * 9 + 6])
+
+        self.varyingN0 = copy(model.modelData[triangleNo * 9 + 2])
+        self.varyingN1 = copy(model.modelData[triangleNo * 9 + 5])
+        self.varyingN2 = copy(model.modelData[triangleNo * 9 + 8])
 
         v0.append(1.0)
         v1.append(1.0)
@@ -52,5 +62,13 @@ class PhongShader:
         for i in range(3):
             self.position[i] = self.viewportMatrix @ self.position[i]
 
-    def fragment(self, x, y, z):
-        self.fragColor = [(z / 2 + 0.5) ** 3, (z / 2 + 0.5) ** 3, (z / 2 + 0.5) ** 3]
+    def fragment(self, u, v):
+        normalInterpolated = []
+        for i in range(3):
+            normalInterpolated.append(
+                (self.varyingN0[i] + self.varyingN1[i] + self.varyingN2[i]) / 3
+            )
+        normalInterpolated = Utils.norm(normalInterpolated)
+        self.fragColor = [
+            Utils.clamp(Utils.dot(normalInterpolated, [0.0, 0.0, 1.0]), 0.0, 1.0)
+        ] * 3

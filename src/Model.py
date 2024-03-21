@@ -37,9 +37,20 @@ class Model:
                 # ORDER: vertex coord - tex coord - normal coord
                 # e.g. modelData = [..., [x, y, z], [x, y], [x, y, z], ...]
                 for i in range(3):
+
                     faceData.append(coords[int(faceVerticesIdx[i][0])])
-                    faceData.append(texCoords[int(faceVerticesIdx[i][1])])
-                    faceData.append(normalCoords[int(faceVerticesIdx[i][2])])
+
+                    if (
+                        faceVerticesIdx[i][1] != ""
+                    ):  # in cases some models don't have UV
+                        faceData.append(texCoords[int(faceVerticesIdx[i][1])])
+                    else:
+                        faceData.append([0.0] * 2)
+
+                    if faceVerticesIdx[i][2] != "":  # or normals
+                        faceData.append(normalCoords[int(faceVerticesIdx[i][2])])
+                    else:
+                        faceData.append([0.0] * 3)
 
                 self.modelData.extend(faceData)
                 self.triangleNum += 1

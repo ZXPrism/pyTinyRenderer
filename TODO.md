@@ -8,7 +8,12 @@
 - [X] Z-Buffer
 
 2024-3-21
-- [ ] Model, View and Projection
+- [X] Model, View and Projection
+  - [X] lookAt
+  - [X] ortho
+  - [X] perspective
+
+2024-3-22
 - [ ] Normal Texture
 - [ ] Shadow Mapping
 - [ ] Ambient Occlusion

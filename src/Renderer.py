@@ -4,6 +4,8 @@ import numpy as np
 from random import uniform
 from Model import Model
 
+import Utils
+
 
 class Renderer:
 
@@ -28,11 +30,7 @@ class Renderer:
 
     # low-level operations
     def setPixel(self, x, y, color):
-        x = int(x)
-        y = int(y)
-
-        if x >= 0 and x < self.__imgWidth and y >= 0 and y < self.__imgHeight:
-            self.__img[y][x] = color
+        self.__img[y][x] = color
 
     # high-level operations
     def line1(self, x0, y0, x1, y1, color):  # based on math equations
@@ -44,7 +42,7 @@ class Renderer:
 
         for t in tRange:
             P = S + t * V
-            self.setPixel(P[0], P[1], color)
+            self.setPixel(int(P[0]), int(P[1]), color)
 
     def line2(self, x0, y0, x1, y1, color):  # line1 improved / DDA
         x0 = int(x0)
@@ -67,7 +65,7 @@ class Renderer:
 
             slope = dy / dx
             for x in range(x0, x1):
-                self.setPixel(x, slope * (x - x0) + y0, color)
+                self.setPixel(x, int(slope * (x - x0) + y0), color)
         else:
 
             if dy < 0:
@@ -76,7 +74,7 @@ class Renderer:
 
             slope = dx / dy
             for y in range(y0, y1):
-                self.setPixel(slope * (y - y0) + x0, y, color)
+                self.setPixel(int(slope * (y - y0) + x0), y, color)
 
     def line3(self, x0, y0, x1, y1, color):  # Bresenham's line drawing algorithm
         x0 = int(x0)
@@ -231,29 +229,30 @@ class Renderer:
         def barycentric(x, y, v0, v1, v2):
             vec1 = [v2[0] - v0[0], v2[0] - v1[0], v2[0] - x]
             vec2 = [v2[1] - v0[1], v2[1] - v1[1], v2[1] - y]
-            res = [  # res = cross_product(vec1, vec2)
-                vec1[1] * vec2[2] - vec1[2] * vec2[1],
-                vec1[2] * vec2[0] - vec1[0] * vec2[2],
-                vec1[0] * vec2[1] - vec1[1] * vec2[0],
-            ]
+            res = Utils.cross(vec1, vec2)
+
             u = res[0] / -res[2]
             v = res[1] / -res[2]
 
-            return (
-                u >= 0 and v >= 0 and u + v <= 1,
-                u * v0[2] + v * v1[2] + (1 - u - v) * v2[2],
-            )
+            return (u, v)
 
         for x in range(minX, maxX + 1):
             for y in range(minY, maxY + 1):
-                (inside, z) = barycentric(x, y, v0, v1, v2)
-                if inside:
+                if not (
+                    x >= 0 and x < self.__imgWidth and y >= 0 and y < self.__imgHeight
+                ):
+                    continue
+
+                (u, v) = barycentric(x, y, v0, v1, v2)
+
+                if u >= 0 and v >= 0 and u + v <= 1:
+                    z = u * v0[2] + v * v1[2] + (1 - u - v) * v2[2]
                     if self.__zbuffer[x][y] > z:
                         continue
                     self.__zbuffer[x][y] = z
 
                     if self.__shader != None:
-                        self.__shader.fragment(x, y, z)
+                        self.__shader.fragment(u, v)
                         self.setPixel(x, y, self.__shader.fragColor)
                     else:
                         self.setPixel(x, y, color)
